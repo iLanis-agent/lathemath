@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LatheMath</title>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,'Segoe UI',Roboto,sans-serif; background:#0d1117; color:#e6edf3; }
+  .wrap { max-width:720px; margin:0 auto; padding:36px 20px 60px; }
+  h1 { font-size:1.9rem; margin:0; }
+  .tag { color:#9da7b3; margin:6px 0 18px; }
+  .presets { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:22px; }
+  .presets button { background:#21262d; color:#c9d1d9; border:1px solid #30363d; border-radius:999px; padding:8px 16px; font-size:0.9rem; cursor:pointer; }
+  .presets button:hover { border-color:#58a6ff; color:#58a6ff; }
+  section { background:#161b22; border:1px solid #30363d; border-radius:12px; padding:20px; margin-bottom:18px; }
+  h2 { font-size:1rem; margin:0 0 14px; color:#e6edf3; }
+  .row { display:flex; flex-wrap:wrap; gap:14px; margin-bottom:14px; }
+  label { display:block; font-size:0.78rem; color:#9da7b3; margin-bottom:4px; }
+  input, select { background:#0d1117; border:1px solid #30363d; color:#e6edf3; border-radius:6px; padding:8px 10px; font-size:0.95rem; width:130px; }
+  .outs { display:flex; flex-wrap:wrap; gap:12px; }
+  .out { flex:1 1 200px; background:#0d1117; border:1px solid #21262d; border-radius:8px; padding:12px 14px; }
+  .out .val { font-size:1.15rem; font-weight:700; color:#58a6ff; }
+  .out .lab { font-size:0.75rem; color:#9da7b3; margin-top:4px; }
+  .foot { color:#6e7681; font-size:0.8rem; margin-top:10px; }
+  a { color:#58a6ff; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>&#9881;&#65039; LatheMath</h1>
+  <p class="tag">Machining speeds and feeds - the handbook math, without the handbook.</p>
+  <div class="presets">
+    <button data-p="spacer">Aluminum spacer</button>
+    <button data-p="shaft">Steel shaft</button>
+    <button data-p="bolt">M10 bolt fix</button>
+    <button data-p="bushing">Brass bushing</button>
+  </div>
+
+  <section>
+    <h2>1. Speed</h2>
+    <div class="row">
+      <div><label>Material</label>
+        <select id="mat"><option value="mild">Mild steel</option><option value="aluminum">Aluminum</option><option value="brass">Brass</option><option value="stainless">Stainless</option></select></div>
+      <div><label>Tool</label>
+        <select id="tool"><option value="hss">HSS</option><option value="carbide">Carbide</option></select></div>
+      <div><label>Diameter (mm)</label><input id="dia" type="number" step="0.5" min="1" value="25"></div>
+    </div>
+    <div class="outs">
+      <div class="out"><div class="val" id="o-rpm"></div><div class="lab">Spindle speed</div></div>
+      <div class="out"><div class="val" id="o-speednote"></div><div class="lab">Surface speed</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Feed and time</h2>
+    <div class="row">
+      <div><label>Length (mm)</label><input id="len" type="number" step="1" value="100"></div>
+      <div><label>Feed (mm/rev)</label><input id="feed" type="number" step="0.02" value="0.2"></div>
+    </div>
+    <div class="outs">
+      <div class="out"><div class="val" id="o-time"></div><div class="lab">Time per pass</div></div>
+      <div class="out"><div class="val" id="o-feednote"></div><div class="lab">Feed note</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>3. Metric thread</h2>
+    <div class="row">
+      <div><label>Major (mm)</label><input id="tmajor" type="number" step="0.5" value="10"></div>
+      <div><label>Pitch (mm)</label><input id="tpitch" type="number" step="0.25" value="1.5"></div>
+    </div>
+    <div class="outs">
+      <div class="out"><div class="val" id="o-thread"></div><div class="lab">Infeed depth</div></div>
+      <div class="out"><div class="val" id="o-threadnote"></div><div class="lab">Tap drill / passes</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>4. Taper</h2>
+    <div class="row">
+      <div><label>Big dia (mm)</label><input id="pbig" type="number" step="0.5" value="30"></div>
+      <div><label>Small dia (mm)</label><input id="psmall" type="number" step="0.5" value="20"></div>
+      <div><label>Length (mm)</label><input id="plen" type="number" step="1" value="50"></div>
+    </div>
+    <div class="outs">
+      <div class="out"><div class="val" id="o-taper"></div><div class="lab">Compound angle</div></div>
+      <div class="out"><div class="val" id="o-tapernote"></div><div class="lab">Taper ratio</div></div>
+    </div>
+  </section>
+
+  <p class="foot">Starting points, not gospel - rigidity, coolant, and insert geometry move the real numbers. <a href="index.html">About</a> &middot; <a href="https://github.com/iLanis-agent/lathemath">Code</a></p>
+</div>
+<script src="engine.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var num = function (id) { var v = parseFloat($(id).value); return isNaN(v) ? 0 : v; };
+
+  var PRESETS = {
+    spacer:  { mat:'aluminum', tool:'carbide', dia:20, len:30,  feed:0.15, tmajor:6,  tpitch:1,   pbig:20, psmall:18, plen:30 },
+    shaft:   { mat:'mild',     tool:'hss',     dia:25, len:100, feed:0.2,  tmajor:10, tpitch:1.5, pbig:30, psmall:20, plen:50 },
+    bolt:    { mat:'mild',     tool:'hss',     dia:10, len:25,  feed:0.1,  tmajor:10, tpitch:1.5, pbig:10, psmall:8,  plen:25 },
+    bushing: { mat:'brass',    tool:'hss',     dia:15, len:20,  feed:0.12, tmajor:8,  tpitch:1.25,pbig:15, psmall:13, plen:20 }
+  };
+
+  function compute() {
+    var mat = $('mat').value, tool = $('tool').value, dia = num('dia');
+    var vc = LatheMath.surfaceSpeed(mat, tool);
+    var rpm = LatheMath.rpmFor(vc, dia);
+    $('o-rpm').textContent = rpm.toLocaleString() + ' rpm';
+    $('o-speednote').textContent = vc + ' m/min ' + tool.toUpperCase() + ' on ' + mat + ' - start here, listen to the cut';
+
+    var time = LatheMath.cutTime(num('len'), num('feed'), rpm);
+    $('o-time').textContent = time + ' min';
+    var f = num('feed');
+    $('o-feednote').textContent = f >= 0.25 ? 'roughing feed - leave 0.5 mm for a finish pass'
+      : f >= 0.1 ? 'general purpose feed' : 'finishing feed - watch for rubbing, not cutting';
+
+    var depth = LatheMath.threadDepth(num('tpitch'));
+    $('o-thread').textContent = depth + ' mm';
+    $('o-threadnote').textContent = 'tap drill ' + LatheMath.tapDrill(num('tmajor'), num('tpitch')) + ' mm - ~' + LatheMath.threadPasses(depth) + ' passes at 0.127 mm + spring';
+
+    var ang = LatheMath.taperAngle(num('pbig'), num('psmall'), num('plen'));
+    var ratio = LatheMath.taperRatio(num('pbig'), num('psmall'), num('plen'));
+    $('o-taper').textContent = ang + ' deg';
+    $('o-tapernote').textContent = ratio + ' mm per mm - set the compound and indicate it in';
+  }
+
+  function apply(p) {
+    ['mat','tool','dia','len','feed','tmajor','tpitch','pbig','psmall','plen'].forEach(function (id) { $(id).value = p[id]; });
+    compute();
+  }
+
+  document.querySelectorAll('.presets button').forEach(function (b) {
+    b.addEventListener('click', function () { apply(PRESETS[b.getAttribute('data-p')]); });
+  });
+  document.querySelectorAll('input, select').forEach(function (el) {
+    el.addEventListener('input', compute);
+    el.addEventListener('change', compute);
+  });
+  apply(PRESETS.shaft);
+}());
+</script>
+</body>
+</html>
